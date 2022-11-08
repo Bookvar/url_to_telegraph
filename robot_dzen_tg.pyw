@@ -150,7 +150,6 @@ def id_post_exist(id_dzen_post):
     return post_exist
 
 
-
 def main():
     #  Подготавливаем webdriver
     profile_path = r'C:\Users\mitkevich\AppData\Roaming\Mozilla\Firefox\Profiles\7j0x0pgq.default-esr-2'
