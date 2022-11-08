@@ -177,26 +177,27 @@ def main():
     # try:
     html = driver.find_element(By.TAG_NAME,'html')
     #  проскролим браузер
-    for i in range(0, 10):
+    for i in range(0, 3):
         html.send_keys(Keys.END)
         time.sleep(1)
     
     feed__rows = driver.find_elements(By.CLASS_NAME, 'feed__row')
     for feed__row in reversed(feed__rows):
-        # print(feed__row.get_attribute('id'))
+        print(feed__row.get_attribute('id'))
         feed_item = feed__row.find_element(By.CLASS_NAME, 'feed__item')
         # берём id feed_item 
         id_feed_item = feed_item.get_attribute('id')
+        print(id_feed_item)
         #  поиск подходящего класса 
         card_image = feed_item.find_elements(By.CLASS_NAME,"card-image-compact-view")
         if id_post_exist(id_feed_item):  # если уже есть в базе
-            # print('уже был')
+            print('уже был')
             continue  #  то переходим на следующий пост в дзене
         elif len(card_image)==0:
-            # print('не подходит по классу')
+            print('не подходит по классу')
             continue  #  то переходим на следующий пост в дзене
         else:
-            # print('обработка')
+            print('обработка')
             #  обрабатываем найденный пост
             # первый искать нельзя, есть посты без картинки
             tags_a = feed_item.find_elements(By.TAG_NAME,"a")
