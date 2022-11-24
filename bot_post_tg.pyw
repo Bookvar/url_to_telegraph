@@ -177,22 +177,6 @@ def main():
     # options.headless = True
     service = Service(r'C:\bot\statbot\BrowserDrivers\geckodriver.exe')
     driver = Firefox(service=service, options=options)
-    '''
-
-    binary = FirefoxBinary("C:\\Program Files\\Mozilla Firefox\\firefox.exe")
-    profile = FirefoxProfile(
-        "C:\\Users\\mitkevich\\AppData\\Roaming\\Mozilla\\Firefox\\Profiles\\7j0x0pgq.default-esr-2"
-    )
-    # добвака сокрытия окна браузера (делаем его невидимым) требует добавку в webdriver = webdriver.Firefox(options=opts)
-    opts = webdriver.FirefoxOptions()
-    opts.headless = True
-    driver = webdriver.Firefox(firefox_profile=profile, firefox_binary=binary, options = opts,
-                                executable_path="C:\\bot\\statbot\\BrowserDrivers\\geckodriver.exe")
-    #  браузер невидим, максимайзить не надо
-    # driver.maximize_window()    
-    '''  
-
-
 
     # идём на сайт в ленту архива новостей
     driver.get("https://ukraina.ru/archive/")
@@ -226,75 +210,6 @@ def main():
             list_articles.append(href_item) 
 
 
-        '''
-        #  поиск подходящего класса 
-        card_image = feed_item.find_elements(By.CLASS_NAME,"card-image-compact-view")
-        if id_post_exist(id_feed_item):  # если уже есть в базе
-            print('уже был')
-            continue  #  то переходим на следующий пост в дзене
-        elif len(card_image)==0:
-            print('не подходит по классу')
-            continue  #  то переходим на следующий пост в дзене
-        else:
-            print('обработка')
-            #  обрабатываем найденный пост
-            # первый искать нельзя, есть посты без картинки
-            tags_a = feed_item.find_elements(By.TAG_NAME,"a")
-            a_class = ''
-            title=''
-            href=''
-            for tag_a in tags_a:
-                if tag_a.get_attribute("aria-label") is None:
-                    pass
-                else:
-                    a_class = tag_a.get_attribute("class")
-                    title = tag_a.get_attribute("aria-label")
-                    href = tag_a.get_attribute("href")
-                    znak = href.find("?")
-                    href = href[:znak]
-                    break
-
-            print("id: " + id_feed_item)
-            print("title: " + title)
-            print("href: " + href)
-            # if a_class == 'card-video-2-view__clickable':
-            #     continue
-            # if a_class == 'card-image-compact-view__clickable':    
-            #  добавим проверку что пост на просто текстовый
-            elem_card_image = feed_item.find_element(By.CLASS_NAME, 'card-image-compact-view' )
-            #  если содержит класс _text_only то div с картинкой искать нельзя
-            elem_class = elem_card_image.get_attribute("class")
-            if  '_text-only' in elem_class.split(" "):
-                href_image = None
-            else:
-                div_image = feed_item.find_element(By.CLASS_NAME, 'card-layer-image-view__image')
-                style = div_image.get_property("style")
-                href_image = style['backgroundImage'][5:-2]
-                print("href image: " + href_image)
-
-            text = ""
-            #  если простой пост, а не видео, то там должна быть часть текста статьи
-            # if a_class == 'card-image-compact-view__clickable':    
-            card_layer = feed_item.find_element(By.CLASS_NAME, 'card-layer-snippet-view')
-            text = card_layer.find_element(By.CLASS_NAME, 'zen-ui-line-clamp').text
-                # print(text)
-            if title !='':    
-                caption = '<b>'+ title +'</b>\n\n' + text +'\n\n <a href="'+ href +'">Читать источник</a>'
-                
-                url_tg_post = send_telegram(caption, href_image)
-                conn = sqlite3.connect('./data/dzen_urls.db')
-                cur = conn.cursor()
-                if (href_image is None):
-                    insert_str = "INSERT INTO urls VALUES('"+id_feed_item +"', '"+href+"', '', '"+url_tg_post+"')"
-                else:
-                    insert_str = "INSERT INTO urls VALUES('"+id_feed_item +"', '"+href+"', '"+href_image+"', '"+url_tg_post+"')"
-                cur.execute(insert_str)
-                conn.commit()
-                cur.close()
-                # пауза, чтобы не было ошибки HTTP 429 too many requests
-                time.sleep(10)
-
-        '''
 
     description = ""    
     time.sleep(2)
@@ -302,12 +217,6 @@ def main():
     # 
     for url_article in list_articles:
         post_to_tg(driver, url_article)
-
-
-
-
-
-
     driver.quit()
 
 
