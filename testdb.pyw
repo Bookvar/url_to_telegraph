@@ -1,4 +1,24 @@
 
+part_caption = '<b>История с таможней, давление на УПЦ. Итоги 27 ноября на Украине</b>\n\n<b>В Федеральной таможенной службе прояснили ситуацию с грузами двойного назначения для СВО. Служба безопасности Украины продолжает обыски в храмах Украинской православной церкви</b>Вечером 27 ноября бывший народный депутат Украины, спикер парламента Новороссии Олег Царёв рассказал о том, что возникшие на таможне проблемы с грузами двойного назначения, <b>на которые ранее пожаловались волонтёры, решен'
+tail_caption ='<a href="https://telegra.ph/Istoriya-s-tamozhnej-davlenie-na-UPC-Itogi-27-noyabrya-na-Ukraine-11-28"> ... читать полностью</a>'
+pos = len(part_caption)
+closed_tags = ''
+while (pos > 0):
+    pos_tag_r = part_caption[:pos].rfind('>')
+    pos_tag_l = part_caption[:pos_tag_r].rfind('<')
+    tag = part_caption[pos_tag_l:pos_tag_r+1]
+    pos = pos_tag_l-1
+    if tag[1] == '/':
+        open_tag = tag.replace('</', '<')
+        pos = part_caption[:pos].rfind(open_tag)
+    else:
+        closed_tag = tag.replace('<', '</')
+        closed_tags += closed_tag
+
+
+
+
+'''
 import logging
 # Включаем логирование, чтобы не пропустить важные сообщения
 logging.basicConfig(level=logging.INFO)
@@ -20,7 +40,7 @@ result = (lambda message: message.text != "" and message.sender_chat.id == GROUP
 res = False if (message.sender_chat is None) else message.sender_chat.id == GROUP_ID
 print(message.sender_chat.id)
 print(result)
-
+'''
 # import sqlite3
 # conn = sqlite3.connect('./data/urls.db')
 # cur = conn.cursor()

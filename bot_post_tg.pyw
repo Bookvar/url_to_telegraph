@@ -19,6 +19,7 @@ $ deactivate
 '''
 
 import time
+from datetime import date, timedelta
 import requests
 import logging
 
@@ -47,11 +48,6 @@ channel_id = config.GROUP_ID
 import ctypes  
 # Включаем логирование, чтобы не пропустить важные сообщения
 logging.basicConfig(level=logging.INFO)
-
-
-
-
-
 
 def is_string_an_url(url_string: str) -> bool:
     result = validators.url(url_string)
@@ -120,19 +116,28 @@ def get_id_article(url_article):
 def post_to_tg(driver, url_article):
     id_article = get_id_article(url_article)  
     if id_post_exist(id_article): # если уже есть в базе
-        print('уже был')
+        print(id_article + ' уже был')
     else:
-        print('обработка')
+        print(id_article + ' обработка')
         #  обрабатываем найденный пост
 
         #open tab
-        driver.find_element(By.TAG_NAME,'body').send_keys(Keys.COMMAND + 't')
+        # driver.find_element(By.TAG_NAME,'body').send_keys(Keys.COMMAND + 't')
         # You can use (Keys.CONTROL + 't') on other OSs
+
+        # сохраняем десктриптор текущего окна
+        window_before = driver.window_handles[0]
         # Load a page
+
+        # открыть новую вкладку
+        driver.execute_script("window.open()")
+        # сохраняем десктриптор нового окна
+        window_after = driver.window_handles[1]
+        # переключаемся на новую вкладку
+        driver.switch_to.window(window_after)
         # открываем статью в новой вкладке
         driver.get(url_article)
         time.sleep(1)
-
         # постим статью в телеграф
         page_telegraph = get_url.create_page_telegraph(url_article)
         # return [url_telegraph, src_img, title, announce_text, article_blocks_all]
@@ -145,14 +150,40 @@ def post_to_tg(driver, url_article):
 
         # закрываем вкладку
         # (Keys.CONTROL + 'w') on other OSs.
-        driver.find_element(By.TAG_NAME,'body').send_keys(Keys.COMMAND + 'w')
+        # driver.find_element(By.TAG_NAME,'body').send_keys(Keys.COMMAND + 'w')
+
+        #  закрываем вкладку
+        driver.close()
+        #  переключаемся на старое окно
+        driver.switch_to.window(window_before)
+
 
         #  постим телеграф в телеграм
         if title !='':    
-            # caption = '<b>'+ title +'</b>\n\n' + announce_text
-            # article_blocks_all = '<div>Американское издание The Wall Street Journal опубликовало сообщение о том, что Саудовская Аравия и другие участники картеля ОПЕК+ обсуждают вопрос об увеличении добычи нефти на 500 тысяч баррелей в сутки. Сейчас объем составляет около 29,7 миллионов баррелей.</div>'
-            caption = '<b>'+ title +'</b>' + announce_text + article_blocks_all
-            caption = caption[:caption[:1000].rfind('\n\n')-2] +'<a href="'+ url_telegraph +'"> ... читать полностью</a>'
+             
+            full_caption = ('<b>'+ title +'</b> \n\n') + ('' if announce_text == '' else (announce_text + '\n\n')) + (article_blocks_all.lstrip('\n'))
+            # хвостик к тексту поста с сылкой на телеграф
+            tail_caption = '<a href="'+ url_telegraph +'"> ... читать полностью</a>'
+            # подрезаем текст исходя из ограничения в 1024 символа для caption
+            # минусуя его длину на длину хвостика и сдвигаясь к ближайшему переносу справа 
+            # то есть обрезаем строку на 1000 символов минус длина хвоста
+            part_caption = full_caption[:full_caption[:800-len(tail_caption)].rfind('\n\n')]
+            #  проверяем незакрытые теги для добавления их
+            pos = len(part_caption)
+            closed_tags = ''
+            while (pos > 0):
+                pos_tag_r = part_caption[:pos].rfind('>')
+                pos_tag_l = part_caption[:pos_tag_r].rfind('<')
+                tag = part_caption[pos_tag_l:pos_tag_r+1]
+                pos = pos_tag_l-1
+                if tag[1] == '/':
+                    open_tag = tag.replace('</', '<')
+                    pos = part_caption[:pos].rfind(open_tag)
+                else:
+                    closed_tag = tag.replace('<', '</')
+                    closed_tags += closed_tag
+            caption =  part_caption + closed_tags + tail_caption
+
             # caption = caption +'\n\n <a href="'+ url_telegraph +'">Читать полностью</a>'
             url_tg_post = send_telegram(caption, href_image)
             conn = sqlite3.connect('./data/article_urls.db')
@@ -175,9 +206,12 @@ def main():
     options = Options()
     options.set_preference('profile', profile_path)
     # options.headless = True
+    options.headless = True
     service = Service(r'C:\bot\statbot\BrowserDrivers\geckodriver.exe')
     driver = Firefox(service=service, options=options)
 
+    ''' 
+    # ВАРИАНТ 1 - брать с ленты архива сайта (минус - видим только 20 последних статей)
     # идём на сайт в ленту архива новостей
     driver.get("https://ukraina.ru/archive/")
     # try:
@@ -208,13 +242,91 @@ def main():
         if need_to_post:
             print('постим')
             list_articles.append(href_item) 
+    '''
+    # ВАРИАНТ 2 - брать с xml ленты архива сайта (распарсим сразу два дня - вчера и сегодня)
+    # идём на сайт в ленту архива новостей
 
+    today = date.today()
+    yesterday = today - timedelta(days=1)
+    today_str = today.strftime('%Y%m%d')
+    yesterday_str = yesterday.strftime('%Y%m%d')
+    xmls = ['https://ukraina.ru/archive/'+today_str+'/?xml',
+            'https://ukraina.ru/archive/'+yesterday_str+'/?xml'
+            ]
+    #  
+    xml_archives = []
+    for xml in xmls:
+        driver.get(xml) 
+        time.sleep(1)
+        # 
+        try:
+            pager = driver.find_element(By.CSS_SELECTOR, 'pager[view="pager_no_script"]')
+        except  Exception as e:
+            # NoSuchElementException
+            print(e)
+            print("Pager не найден " + time.strftime('%Y-%m-%d %H:%M'))
+            time.sleep(5)
+            break
+        else:    
+            # pager = driver.find_element(By.CSS_SELECTOR, 'pager[view="pager_no_script"]')
+            pages = pager.find_elements(By.CSS_SELECTOR, 'page')
+            n=''
+            for page in pages:
+                url = page.get_attribute('url')
+                param = page.get_attribute('param')
+                if param is None:
+                    xml_archives.append('https://ukraina.ru'+url+'&xml') 
+                    n = page.get_attribute('n')
+                if param == 'last' and n != page.get_attribute('n'):
+                    xml_archives.append('https://ukraina.ru'+url+'&xml') 
+    # print('Порядок страниц архива за сегодня и вчера от свежего к старому')
+    # for xml_archive in xml_archives:
+    #     print(xml_archive) 
+    # print('-------------------------------------------------------')
+    
+    list_articles = []
+    for xml_archive in reversed(xml_archives):
+        print(xml_archive) 
+        driver.get(xml_archive) 
+        time.sleep(1)
+        # try:
+        list_archive = driver.find_element(By.CSS_SELECTOR, 'list[sid="archive"]')
+        #  проскролим браузер
+        # for i in range(0, 3):
+        #     html.send_keys(Keys.END)
+        #     time.sleep(1)
+        
+        list_items = list_archive.find_elements(By.TAG_NAME, 'article')
+        for list_item in reversed(list_items):
+            # print(list_item.get_attribute('id'))
+            id_article = list_item.get_attribute('id')
+            tag_url = list_item.find_element(By.TAG_NAME, 'url')
+            # короткая ссылка на статью
+            short_url_article = tag_url.text
+            # print(short_url_article)
+            
+            full_url_article = 'https://ukraina.ru' + short_url_article
+            # список тегов
+            list_tags = list_item.find_elements(By.CSS_SELECTOR, 'list[type="tag"]')
+            
+            need_to_post = False
+            for list_tag in list_tags:
+                data_sid = list_tag.get_attribute('sid')
+                if data_sid == 'exclusive':
+                    need_to_post = True
+                    break
+            # если статью надо постить
+            if need_to_post:
+                # print('Надо постить - добавим в список')
+                list_articles.append(full_url_article) 
 
+    # 
 
     description = ""    
     time.sleep(2)
-    print(list_articles)
-    # 
+    # for item_la in list_articles:
+    #     print(item_la)
+    # # 
     for url_article in list_articles:
         post_to_tg(driver, url_article)
     driver.quit()
@@ -223,7 +335,7 @@ def main():
 if __name__ == '__main__':  # Если мы запускаем файл напрямую, а не импортируем
     i = 0
     while True:
-        print("Бесконечный цикл. Шаг "+str(i))
+        print("Шаг "+str(i)+ '. '+ time.strftime('%Y-%m-%d %H:%M'))
         main()  # то запускаем функцию main()
         print("Выдерживаем паузу...")
         time.sleep(300)

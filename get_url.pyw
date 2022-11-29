@@ -90,9 +90,10 @@ def create_page_telegraph(url_article):
     alt_img = article_announce_media.attrs.get('alt')
     article_announce_media.attrs = {'src':src_img, 'alt':alt_img}
     copyright_img = article_announce.find(class_='media__copyright-item')
-    if copyright_img.name == 'div':
-        copyright_img.name = 'figcaption'
-    copyright_img.attr={}
+    if copyright_img is not None:
+        if copyright_img.name == 'div':
+            copyright_img.name = 'figcaption'
+        copyright_img.attr={}
 
     announce_media = '<figure>' + str(article_announce_media) + str(copyright_img)+'</figure>'
     # копирайт медиа
@@ -112,7 +113,7 @@ def create_page_telegraph(url_article):
 
     article_announce_text = soup.find(class_='article__announce-text')
     # пусто, если нет анонса
-    announce_text = '' if article_announce_text is None else '<b>' + article_announce_text.text + '</b>' 
+    announce_text = '' if article_announce_text is None else '<b>' + article_announce_text.text + '</b>\n' 
     # class_id = SoupStrainer(attrs={'class': 'article__block', 'data-type':'text'})
 
     # ВАРИАНТ article__block
@@ -121,6 +122,9 @@ def create_page_telegraph(url_article):
     #  выбираем все блоки статьи
     class_id = SoupStrainer(attrs={'class': 'article__block'})
     article__blocks = BeautifulSoup(page.data, "html.parser", parse_only=class_id)
+    
+    #  для телеграфа меняем запрещенные теги  и убираем аттрибуты
+    #  для телеграмма собираем блок абзацев
     tg_article_blocks_all = ''
     for article__block in article__blocks:
         data_type = article__block.attrs.get('data-type')
@@ -135,41 +139,18 @@ def create_page_telegraph(url_article):
             article__block.contents=[]
         # стираем аттрибуты
         article__block.attrs={}
-        tg_article_blocks_all = tg_article_blocks_all +'\n\n'+ article__block.getText()
+        if article__block.text != '':
+            tg_article_blocks_all = tg_article_blocks_all + article__block.getText() + '\n\n'
     
+    # удаляем пустые абзацы для телеграф 
+    len_ab = len(article__blocks.contents)
+    for indx in range(len_ab-1,-1,-1):
+        if article__blocks.contents[indx].text=='':
+            article__blocks.contents.pop(indx)
     article_blocks_all = article__blocks.prettify()
-    
-    # попытка очистить article__blocks от запретных тегов
-    # print('==================================')
-    # print(tg_article_blocks_all)
-    # print('==================================')
-    # tg_article_blocks_all = article__blocks
-    # invalid_tags = ['p','br']
-    # for tag in invalid_tags:
-    #     for match in tg_article_blocks_all.findAll(tag):
-    #         match.replaceWithChildren()
-    # print('==================================')
-    # print(tg_article_blocks_all)
-    # print('==================================')
-    '''
-    # ВАРИАНТ article__text
-    # в этом варианте сразу беру дочерний article__text, игнорируя article__block
-    # 
-    #  выбираем все article__text 
-    class_id = SoupStrainer(attrs={'class': 'article__text'})
-    article__blocks = BeautifulSoup(page.data, "html.parser", parse_only=class_id)
-    for article__block in article__blocks:
-        # data_type = article__block.attrs.get('data-type')
-        if article__block.name == 'div':
-            article__block.name = 'p'
-        # стираем аттрибуты
-        article__block.attrs={}
-    article_blocks_all = article__blocks.prettify()
-    # print(article_blocks_all)
-    '''
-    
+
     telegraph = Telegraph()
-    html_content= announce_media +  announce_text + '<br />' + article_blocks_all
+    html_content= announce_media + announce_text + article_blocks_all
     access_token = "942ddb15907ba63df3cd71dc8255e5afc7f364213ee732df08ef543fd0a1"
     telegraph = Telegraph(access_token) # передаём токен доступ к страницам аккаунта
     response = telegraph.create_page(
@@ -193,8 +174,9 @@ def create_page_telegraph(url_article):
 
     return [url_telegraph, src_img, title, announce_text, tg_article_blocks_all]
 
-
-url_article = 'https://ukraina.ru/20221118/1040956068.html'
-page_telegraph = create_page_telegraph(url_article)
-url_page_telegraph = page_telegraph[0]
-print(url_page_telegraph)
+if __name__ == '__main__':  # Если мы запускаем файл напрямую, а не импортируем
+    url_article = 'https://ukraina.ru/20221125/1041214798.html'
+    # url_article = 'https://ukraina.ru/20221118/1040956068.html'
+    page_telegraph = create_page_telegraph(url_article)
+    url_page_telegraph = page_telegraph[0]
+    print(url_page_telegraph)
