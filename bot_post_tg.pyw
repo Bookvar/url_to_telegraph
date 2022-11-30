@@ -14,6 +14,9 @@ $ echo "requests==2.28.1" > requirements.txt
 $ echo "selenium==4.5.0" >> requirements.txt
 $ echo "environs==9.5.0" >> requirements.txt
 $ echo "validators==0.20.0" >> requirements.txt
+$ echo "telegraph==2.2.0" >> requirements.txt
+$ echo "beautifulsoup4==4.11.1" >> requirements.txt
+
 $ pip install -r requirements.txt
 $ deactivate
 '''
@@ -265,8 +268,9 @@ def main():
             # NoSuchElementException
             print(e)
             print("Pager не найден " + time.strftime('%Y-%m-%d %H:%M'))
-            time.sleep(5)
-            break
+            print("Берём " + xml)
+            xml_archives.append(xml) 
+            continue
         else:    
             # pager = driver.find_element(By.CSS_SELECTOR, 'pager[view="pager_no_script"]')
             pages = pager.find_elements(By.CSS_SELECTOR, 'page')
