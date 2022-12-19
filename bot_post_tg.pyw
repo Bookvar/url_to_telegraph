@@ -249,6 +249,10 @@ def main():
     # ВАРИАНТ 2 - брать с xml ленты архива сайта (распарсим сразу два дня - вчера и сегодня)
     # идём на сайт в ленту архива новостей
 
+    # https://ukraina.ru/exclusive/
+    # https://ukraina.ru/interview/
+    # https://ukraina.ru/opinion/
+
     today = date.today()
     yesterday = today - timedelta(days=1)
     today_str = today.strftime('%Y%m%d')
@@ -257,6 +261,15 @@ def main():
             'https://ukraina.ru/archive/'+yesterday_str+'/?xml'
             ]
     #  
+    # xmls = ['https://ukraina.ru/exclusive/'+today_str+'/?xml',
+    #         'https://ukraina.ru/interview/'+today_str+'/?xml',
+    #         'https://ukraina.ru/opinion/'+today_str+'/?xml',
+    #         'https://ukraina.ru/exclusive/'+yesterday_str+'/?xml',
+    #         'https://ukraina.ru/interview/'+yesterday_str+'/?xml',
+    #         'https://ukraina.ru/opinion/'+yesterday_str+'/?xml'
+    #         ]
+
+
     xml_archives = []
     for xml in xmls:
         driver.get(xml) 
@@ -293,48 +306,47 @@ def main():
         print(xml_archive) 
         driver.get(xml_archive) 
         time.sleep(1)
-        # try:
-        list_archive = driver.find_element(By.CSS_SELECTOR, 'list[sid="archive"]')
-        #  проскролим браузер
-        # for i in range(0, 3):
-        #     html.send_keys(Keys.END)
-        #     time.sleep(1)
-        
-        list_items = list_archive.find_elements(By.TAG_NAME, 'article')
-        for list_item in reversed(list_items):
-            # print(list_item.get_attribute('id'))
-            id_article = list_item.get_attribute('id')
-            tag_url = list_item.find_element(By.TAG_NAME, 'url')
-            # короткая ссылка на статью
-            short_url_article = tag_url.text
-            # print(short_url_article)
+        try:
+            list_archive = driver.find_element(By.CSS_SELECTOR, 'list[sid="archive"]')
+            #  проскролим браузер
+            # for i in range(0, 3):
+            #     html.send_keys(Keys.END)
+            #     time.sleep(1)
             
-            full_url_article = 'https://ukraina.ru' + short_url_article
-            # список тегов
-            list_tags = list_item.find_elements(By.CSS_SELECTOR, 'list[type="tag"]')
-            
-            need_to_post = False
-            for list_tag in list_tags:
-                data_sid = list_tag.get_attribute('sid')
-                if data_sid == 'exclusive':
-                    need_to_post = True
-                    break
-            # если статью надо постить
-            if need_to_post:
-                # print('Надо постить - добавим в список')
-                list_articles.append(full_url_article) 
-
-    # 
-
+            list_items = list_archive.find_elements(By.TAG_NAME, 'article')
+            for list_item in reversed(list_items):
+                # print(list_item.get_attribute('id'))
+                id_article = list_item.get_attribute('id')
+                tag_url = list_item.find_element(By.TAG_NAME, 'url')
+                # короткая ссылка на статью
+                short_url_article = tag_url.text
+                # print(short_url_article)
+                
+                full_url_article = 'https://ukraina.ru' + short_url_article
+                # список тегов
+                list_tags = list_item.find_elements(By.CSS_SELECTOR, 'list[type="tag"]')
+                
+                need_to_post = False
+                for list_tag in list_tags:
+                    data_sid = list_tag.get_attribute('sid')
+                    # if data_sid =='exclusive' or data_sid == 'interview' or data_sid == 'opinion':
+                    if data_sid in ('exclusive', 'interview','opinion'):
+                        need_to_post = True
+                        break
+                # если статью надо постить
+                if need_to_post:
+                    # print('Надо постить - добавим в список')
+                    list_articles.append(full_url_article) 
+        except  Exception as e:
+            # NoSuchElementException
+            print(e)
+            continue
+    
     description = ""    
     time.sleep(2)
-    # for item_la in list_articles:
-    #     print(item_la)
-    # # 
     for url_article in list_articles:
         post_to_tg(driver, url_article)
     driver.quit()
-
 
 if __name__ == '__main__':  # Если мы запускаем файл напрямую, а не импортируем
     i = 0

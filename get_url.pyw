@@ -85,18 +85,23 @@ def create_page_telegraph(url_article):
 
     # Заходное медиа
     article_announce = soup.find(class_='article__announce') # тут есть картинка
-    article_announce_media = article_announce.find('img')
-    src_img = article_announce_media.attrs.get('src')
-    alt_img = article_announce_media.attrs.get('alt')
-    article_announce_media.attrs = {'src':src_img, 'alt':alt_img}
-    copyright_img = article_announce.find(class_='media__copyright-item')
-    if copyright_img is not None:
-        if copyright_img.name == 'div':
-            copyright_img.name = 'figcaption'
-        copyright_img.attr={}
+    
+    if article_announce is not None:
+        article_announce_media = article_announce.find('img')
+        src_img = article_announce_media.attrs.get('src')
+        alt_img = article_announce_media.attrs.get('alt')
+        article_announce_media.attrs = {'src':src_img, 'alt':alt_img}
+        copyright_img = article_announce.find(class_='media__copyright-item')
+        if copyright_img is not None:
+            if copyright_img.name == 'div':
+                copyright_img.name = 'figcaption'
+            copyright_img.attr={}
 
-    announce_media = '<figure>' + str(article_announce_media) + str(copyright_img)+'</figure>'
-    # копирайт медиа
+        announce_media = '<figure>' + str(article_announce_media) + str(copyright_img)+'</figure>'
+    else:
+        announce_media = ''
+        src_img = None
+
 
     article_author = soup.find(class_='article__author')
     author_name = ''
