@@ -184,7 +184,15 @@ def post_to_tg(driver, url_article):
                     pos = part_caption[:pos].rfind(open_tag)
                 else:
                     closed_tag = tag.replace('<', '</')
-                    closed_tags += closed_tag
+                    if tag in ('<...>'):
+                        escaped_tag = tag.replace('<','&lt')
+                        escaped_tag = escaped_tag.replace('>','&gt')
+                        part_caption = part_caption.replace(tag, escaped_tag)
+                        #  
+                        pos = pos - len(tag) # это не тэг - игнорируем 
+                        # pass
+                    else: 
+                        closed_tags += closed_tag
             caption =  part_caption + closed_tags + tail_caption
 
             # caption = caption +'\n\n <a href="'+ url_telegraph +'">Читать полностью</a>'
@@ -209,7 +217,7 @@ def main():
     options = Options()
     options.set_preference('profile', profile_path)
     # options.headless = True
-    options.headless = True
+    # options.headless = True
     service = Service(r'C:\bot\statbot\BrowserDrivers\geckodriver.exe')
     driver = Firefox(service=service, options=options)
 
@@ -248,11 +256,6 @@ def main():
     '''
     # ВАРИАНТ 2 - брать с xml ленты архива сайта (распарсим сразу два дня - вчера и сегодня)
     # идём на сайт в ленту архива новостей
-
-    # https://ukraina.ru/exclusive/
-    # https://ukraina.ru/interview/
-    # https://ukraina.ru/opinion/
-
     today = date.today()
     yesterday = today - timedelta(days=1)
     today_str = today.strftime('%Y%m%d')
@@ -260,15 +263,6 @@ def main():
     xmls = ['https://ukraina.ru/archive/'+today_str+'/?xml',
             'https://ukraina.ru/archive/'+yesterday_str+'/?xml'
             ]
-    #  
-    # xmls = ['https://ukraina.ru/exclusive/'+today_str+'/?xml',
-    #         'https://ukraina.ru/interview/'+today_str+'/?xml',
-    #         'https://ukraina.ru/opinion/'+today_str+'/?xml',
-    #         'https://ukraina.ru/exclusive/'+yesterday_str+'/?xml',
-    #         'https://ukraina.ru/interview/'+yesterday_str+'/?xml',
-    #         'https://ukraina.ru/opinion/'+yesterday_str+'/?xml'
-    #         ]
-
 
     xml_archives = []
     for xml in xmls:
@@ -323,16 +317,28 @@ def main():
                 # print(short_url_article)
                 
                 full_url_article = 'https://ukraina.ru' + short_url_article
+                need_to_post = False
+
+                # Проверка на пост по галочке "Экспорт в телеграм"
+                send_to_telegram = list_item.find_element(By.TAG_NAME, 'send_to_telegram')
+                if send_to_telegram.text == '1':
+                    need_to_post = True
+                
+                # Проверка на пост по белому списку тегов
                 # список тегов
                 list_tags = list_item.find_elements(By.CSS_SELECTOR, 'list[type="tag"]')
-                
-                need_to_post = False
                 for list_tag in list_tags:
+                    # выделяем текущий тег из списка тегов статьи
                     data_sid = list_tag.get_attribute('sid')
                     # if data_sid =='exclusive' or data_sid == 'interview' or data_sid == 'opinion':
+                    #  проверяем на вхождение в белый список тега для экспорта
                     if data_sid in ('exclusive', 'interview','opinion'):
                         need_to_post = True
                         break
+
+                # Тестирую по любым статьям отправлю все 
+                # need_to_post = True
+
                 # если статью надо постить
                 if need_to_post:
                     # print('Надо постить - добавим в список')

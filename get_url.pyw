@@ -91,8 +91,14 @@ def create_page_telegraph(url_article):
     if article_announce is not None:
         article_announce_media = article_announce.find('img')
         if article_announce_media is not None:
-            src_img = article_announce_media.attrs.get('src')
+            # src_img = article_announce_media.attrs.get('src')
+            srcset_img = article_announce_media.attrs.get('srcset')
+            if srcset_img is None:
+                src_img = article_announce_media.attrs.get('src')
+            else:
+                src_img = srcset_img[:srcset_img.find(' ')]
             alt_img = article_announce_media.attrs.get('alt')
+            
             article_announce_media.attrs = {'src':src_img, 'alt':alt_img}
             copyright_img = article_announce.find(class_='media__copyright-item')
             if copyright_img is not None:
