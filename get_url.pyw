@@ -164,14 +164,20 @@ def create_page_telegraph(url_article):
     html_content= announce_media + announce_text + article_blocks_all
     access_token = "942ddb15907ba63df3cd71dc8255e5afc7f364213ee732df08ef543fd0a1"
     telegraph = Telegraph(access_token) # передаём токен доступ к страницам аккаунта
-    response = telegraph.create_page(
-        title = title, # заголовок страницы
-        author_name = author_name,
-        # author_url = author_url,
-        html_content = html_content # ставим параметр html_content, добавляем текст страницы
-    )
+    try:
 
-    url_telegraph = 'https://telegra.ph/{}'.format(response['path'])
+        response = telegraph.create_page(
+            title = title, # заголовок страницы
+            author_name = author_name,
+            # author_url = author_url,
+            html_content = html_content # ставим параметр html_content, добавляем текст страницы
+        )
+
+        url_telegraph = 'https://telegra.ph/{}'.format(response['path'])
+    except  Exception as e:
+        # NoSuchElementException
+        url_telegraph = ''
+        print(e)
 
     # print(url_telegraph) # распечатываем адрес страницы
 
